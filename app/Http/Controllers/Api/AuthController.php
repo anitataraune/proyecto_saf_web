@@ -1,0 +1,97 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Models\Usuario;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+
+use OpenApi\Attributes as OA;
+
+class AuthController extends Controller
+{
+    #[OA\Post(
+    path: '/api/autenticacion/iniciar-sesion',
+    summary: 'Iniciar sesión',
+    description: 'Autentica un usuario y devuelve el token de acceso.',
+    tags: ['Autenticación'],
+    responses: [
+        new OA\Response(
+            response: 200,
+            description: 'Inicio de sesión exitoso'
+        ),
+        new OA\Response(
+            response: 401,
+            description: 'Credenciales incorrectas'
+        )
+    ]
+    )]
+
+    /**
+     * Manejar el inicio de sesión de la API.
+     */
+    public function iniciarSesion(Request $request)
+    {
+        $request->validate([
+            'usuario' => 'required|string',
+            'clave' => 'required|string',
+        ]);
+
+        $credentials = [
+            'usuario' => $request->usuario,
+            'password' => $request->clave, 
+        ];
+
+        if (! Auth::attempt($credentials)) {
+            return response()->json([
+                'mensaje' => 'Las credenciales proporcionadas son incorrectas.',
+            ], 401);
+        }
+
+        $usuario = Auth::user();
+
+        if (! $usuario->activo) {
+            return response()->json([
+                'mensaje' => 'Este usuario se encuentra desactivado.',
+            ], 403);
+        }
+
+        // Crear el token de acceso con Sanctum
+        $token = $usuario->createToken('auth_token')->plainTextToken;
+
+        // 🚀 OBTENER ROLES Y PERMISOS DIRECTOS DESDE SPATIE (Guard api)
+        $roles = $usuario->getRoleNames(); // Devuelve un array con los nombres de sus roles
+        
+        // Obtenemos todos los nombres de sus permisos asignados (por rol o directamente)
+        $permisos = $usuario->getAllPermissions()->pluck('name');
+
+        // Evaluamos si cuenta con el permiso commodore global para facilitarle la lógica a React
+        $esSuperAdmin = $usuario->hasPermissionTo('acceso_total', 'api');
+
+        return response()->json([
+            'mensaje' => 'Inicio de sesión exitoso',
+            'access_token' => $token,
+            'token_type' => 'Bearer',
+            'usuario' => [
+                'id_usuario' => $usuario->id_usuario,
+                'usuario' => $usuario->usuario,
+                'es_admin' => $esSuperAdmin,    // Redundancia útil para el renderizado en React
+                'roles' => $roles,              // Ej: ['auxiliar_almacen']
+                'permisos' => $permisos,        // Ej: ['activo_listar', 'activo_guardar']
+            ],
+        ], 200);
+    }
+
+    /**
+     * Cierre de sesión (Revocar el token actual).
+     */
+    public function cerrarSesion(Request $request)
+    {
+        $request->user()->currentAccessToken()->delete();
+
+        return response()->json([
+            'mensaje' => 'Sesión cerrada correctamente y token eliminado.',
+        ], 200);
+    }
+}
