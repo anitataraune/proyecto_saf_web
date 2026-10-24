@@ -61,6 +61,11 @@ class Activo extends Model
         return $this->hasMany(Baja::class, 'activo_id', 'id_activo');
     }
 
+    public function depreciaciones(): HasMany
+    {
+        return $this->hasMany(Depreciacion::class, 'activo_id', 'id_activo');
+    }
+
     public function asignaciones(): HasMany
     {
         return $this->hasMany(Asignacion::class, 'activo_id', 'id_activo');

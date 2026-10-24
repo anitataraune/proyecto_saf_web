@@ -77,7 +77,11 @@ class RolController extends Controller
     public function eliminar($id): JsonResponse
     {
         $rol = Role::findOrFail($id);
-        
+
+        if ($rol->name === 'administrador') {
+            return response()->json(['mensaje' => 'El rol administrador no puede eliminarse.'], 422);
+        }
+
         // Spatie remueve automáticamente las relaciones en las tablas intermedias al eliminar
         $rol->delete();
 

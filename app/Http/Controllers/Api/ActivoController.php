@@ -71,10 +71,22 @@ class ActivoController extends Controller
             'estado_actual' => 'sometimes|required|string|in:activo,depreciado,dado_de_baja',
             'categoria_id'  => 'sometimes|required|exists:categoria,id_categoria',
             'ubicacion_id'  => 'sometimes|nullable|exists:ubicacion,id_ubicacion', // <--- Validación
+            'proveedor_id'  => 'sometimes|nullable|exists:proveedor,id_proveedor',
         ];
 
-        $request->validate($reglas);
-        $activo->update($request->all());
+        // Solo se actualizan los campos validados (evita modificar imp_depreciacion, nro_depreciacion, etc.)
+        $validado = $request->validate($reglas);
+
+        // Los datos base del cálculo no pueden cambiar si el activo ya tiene depreciaciones
+        $camposBase = ['valor_compra', 'fecha_compra', 'categoria_id'];
+        $activo->fill($validado);
+        if ($activo->isDirty($camposBase) && $activo->depreciaciones()->exists()) {
+            return response()->json([
+                'mensaje' => 'No se puede modificar el valor, la fecha de compra ni la categoría de un activo con depreciaciones registradas.'
+            ], 422);
+        }
+
+        $activo->save();
 
         return response()->json([
             'mensaje' => 'Activo actualizado con éxito.',

@@ -22,7 +22,8 @@ use Illuminate\Support\Facades\Route;
 // RUTAS PÚBLICAS (Sin Token)
 // -------------------------------------------------------------
 Route::prefix('autenticacion')->group(function () {
-    Route::post('iniciar-sesion', [AuthController::class, 'iniciarSesion']);
+    // Máximo 5 intentos por minuto para frenar ataques de fuerza bruta
+    Route::post('iniciar-sesion', [AuthController::class, 'iniciarSesion'])->middleware('throttle:5,1');
 });
 
 // Obtener colores, logo e identidad del sistema sin necesidad de estar logueado
@@ -31,7 +32,7 @@ Route::get('configuracion', [ConfiguracionController::class, 'obtenerConfiguraci
 // -------------------------------------------------------------
 // RUTAS PROTEGIDAS (Requieren Bearer Token)
 // -------------------------------------------------------------
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'usuario.activo'])->group(function () {
 
     // Autenticación (Cerrar sesión solo requiere estar autenticado)
     Route::post(

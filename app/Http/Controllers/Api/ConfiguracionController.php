@@ -30,12 +30,12 @@ class ConfiguracionController extends Controller
             'nit_empresa'      => 'nullable|string|max:50',
             'direccion'        => 'nullable|string|max:255',
             'telefono'         => 'nullable|string|max:50',
-            'logo'             => 'nullable|image|mimes:jpeg,png,jpg,svg,webp|max:2048',
-            'color_primario'   => 'nullable|string|size:7',
-            'color_secundario' => 'nullable|string|size:7',
-            'color_fondo'      => 'nullable|string|size:7',
-            'color_superficie' => 'nullable|string|size:7',
-            'color_texto'      => 'nullable|string|size:7',
+            'logo'             => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'color_primario'   => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'color_secundario' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'color_fondo'      => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'color_superficie' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'color_texto'      => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'fuente'           => 'nullable|string|max:100',
         ];
 

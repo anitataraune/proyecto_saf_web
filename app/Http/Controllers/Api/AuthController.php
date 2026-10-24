@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Usuario;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 
 use OpenApi\Attributes as OA;
 
@@ -38,18 +38,14 @@ class AuthController extends Controller
             'clave' => 'required|string',
         ]);
 
-        $credentials = [
-            'usuario' => $request->usuario,
-            'password' => $request->clave, 
-        ];
+        // Verificación directa de la clave (API sin estado, no usa el guard de sesión)
+        $usuario = Usuario::where('usuario', $request->usuario)->first();
 
-        if (! Auth::attempt($credentials)) {
+        if (! $usuario || ! Hash::check($request->clave, $usuario->clave)) {
             return response()->json([
                 'mensaje' => 'Las credenciales proporcionadas son incorrectas.',
             ], 401);
         }
-
-        $usuario = Auth::user();
 
         if (! $usuario->activo) {
             return response()->json([

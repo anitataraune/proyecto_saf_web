@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'role'       => \Spatie\Permission\Middleware\RoleMiddleware::class,
+            'usuario.activo' => \App\Http\Middleware\VerificarUsuarioActivo::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

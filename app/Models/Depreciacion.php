@@ -34,7 +34,10 @@ class Depreciacion extends Model
     protected function casts(): array
     {
         return [
-            'ufv_inicio'             => 'double',
+            'activo_id'              => 'integer',
+            'mes'                    => 'integer',
+            'anio'                   => 'integer',
+            'ufv_inicio'           => 'double',
             'ufv_fin'                => 'double',
             'valor_inicial'          => 'double',
             'actualizacion_valor'    => 'double',

@@ -72,10 +72,18 @@ class UsuarioController extends Controller
         return response()->json(['mensaje' => 'Usuario activado correctamente'], 200);
     }
 
-    public function desactivar($id)
+    public function desactivar(Request $request, $id)
     {
         $usuario = Usuario::findOrFail($id);
+
+        if ($usuario->id_usuario === $request->user()->id_usuario) {
+            return response()->json(['mensaje' => 'No puede desactivar su propio usuario.'], 422);
+        }
+
         $usuario->update(['activo' => false]);
+
+        // Revocar sus tokens para cortar el acceso inmediatamente
+        $usuario->tokens()->delete();
 
         return response()->json(['mensaje' => 'Usuario desactivado correctamente (Acceso restringido)'], 200);
     }
@@ -83,9 +91,15 @@ class UsuarioController extends Controller
     // --- MANEJO DE ELIMINADO LÓGICO (SOFT DELETES) ---
 
     // Eliminado lógico (Manda a Soft Delete)
-    public function eliminar($id)
+    public function eliminar(Request $request, $id)
     {
         $usuario = Usuario::findOrFail($id);
+
+        if ($usuario->id_usuario === $request->user()->id_usuario) {
+            return response()->json(['mensaje' => 'No puede eliminar su propio usuario.'], 422);
+        }
+
+        $usuario->tokens()->delete();
         $usuario->delete();
 
         return response()->json(['mensaje' => 'Usuario enviado a papelera (Soft Deleted)'], 200);

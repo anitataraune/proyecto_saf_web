@@ -20,11 +20,14 @@ class RolesYUsuariosSeeder extends Seeder
         $rolAdmin->syncPermissions($permisos); 
         
         // 3. Crear el usuario administrador base usando TUS columnas del $fillable
-        $usuarioAdmin = Usuario::create([
-            'usuario' => 'admin',          // En lugar de email
-            'clave' => '123456',         // Tu cast 'hashed' se encarga de encriptarla automáticamente
-            'activo' => true,
-        ]);
+        // firstOrCreate permite volver a ejecutar el seeder sin error de clave única
+        $usuarioAdmin = Usuario::firstOrCreate(
+            ['usuario' => env('ADMIN_USUARIO', 'admin')],
+            [
+                'clave' => env('ADMIN_CLAVE', '123456'), // Tu cast 'hashed' se encarga de encriptarla automáticamente
+                'activo' => true,
+            ]
+        );
 
         // 4. Asignar el rol al usuario
         $usuarioAdmin->assignRole($rolAdmin);
