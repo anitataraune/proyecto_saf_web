@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ActualizarUsuarioRolRequest;
+use App\Http\Requests\GuardarUsuarioRolRequest;
 use App\Models\Usuario;
 use Illuminate\Http\Request;
 
@@ -39,15 +41,8 @@ class UsuarioRolController extends Controller
     /**
      * Registrar una nueva asignación de roles para un usuario.
      */
-    public function guardar(Request $request)
+    public function guardar(GuardarUsuarioRolRequest $request)
     {
-        $request->validate([
-            // Validamos contra tu llave primaria 'id_usuario' y tu tabla 'usuario'
-            'usuario_id' => 'required|exists:usuario,id_usuario', 
-            'roles'      => 'required|array',
-            'roles.*'    => 'string|exists:roles,name',
-        ]);
-
         // Buscamos por tu llave primaria personalizada
         $user = Usuario::findOrFail($request->usuario_id);
         
@@ -76,13 +71,8 @@ class UsuarioRolController extends Controller
     /**
      * Actualizar por completo los roles de un usuario.
      */
-    public function actualizar(Request $request, $id)
+    public function actualizar(ActualizarUsuarioRolRequest $request, $id)
     {
-        $request->validate([
-            'roles'   => 'required|array',
-            'roles.*' => 'string|exists:roles,name',
-        ]);
-
         $user = Usuario::findOrFail($id);
         $user->syncRoles($request->roles);
 

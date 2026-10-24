@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ActualizarConfiguracionRequest;
 use App\Models\Configuracion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -22,28 +23,12 @@ class ConfiguracionController extends Controller
     /**
      * Actualizar la configuración del sistema.
      */
-    public function actualizarConfiguracion(Request $request)
+    public function actualizarConfiguracion(ActualizarConfiguracionRequest $request)
     {
-        $reglas = [
-            'nombre_sistema'   => 'nullable|string|max:255',
-            'nombre_empresa'   => 'nullable|string|max:255',
-            'nit_empresa'      => 'nullable|string|max:50',
-            'direccion'        => 'nullable|string|max:255',
-            'telefono'         => 'nullable|string|max:50',
-            'logo'             => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
-            'color_primario'   => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-            'color_secundario' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-            'color_fondo'      => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-            'color_superficie' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-            'color_texto'      => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-            'fuente'           => 'nullable|string|max:100',
-        ];
-
-        $request->validate($reglas);
-
         $configuracion = Configuracion::firstOrCreate([]);
 
-        $datos = $request->except(['logo']);
+        // Solo los campos validados (sin el archivo, que se procesa aparte)
+        $datos = collect($request->validated())->except('logo')->all();
 
         // Procesar subida del logo
         if ($request->hasFile('logo')) {

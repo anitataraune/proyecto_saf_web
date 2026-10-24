@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ActualizarRolRequest;
+use App\Http\Requests\GuardarRolRequest;
 use Illuminate\Http\Request;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
@@ -17,13 +19,9 @@ class RolController extends Controller
         return response()->json($roles, 200);
     }
 
-    public function guardar(Request $request): JsonResponse
+    public function guardar(GuardarRolRequest $request): JsonResponse
     {
-        $validado = $request->validate([
-            'name' => 'required|string|unique:roles,name',
-            'permisos' => 'nullable|array',
-            'permisos.*' => 'string|exists:permissions,name', // Valida que los permisos existan en la BD
-        ]);
+        $validado = $request->validated();
 
         // Creamos el rol especificando el guard correspondiente (usualmente 'api' o 'web')
         $rol = Role::create([
@@ -48,15 +46,11 @@ class RolController extends Controller
         return response()->json($rol, 200);
     }
 
-    public function actualizar(Request $request, $id): JsonResponse
+    public function actualizar(ActualizarRolRequest $request, $id): JsonResponse
     {
         $rol = Role::findOrFail($id);
 
-        $validado = $request->validate([
-            'name' => 'required|string|unique:roles,name,' . $rol->id,
-            'permisos' => 'nullable|array',
-            'permisos.*' => 'string|exists:permissions,name',
-        ]);
+        $validado = $request->validated();
 
         $rol->update(['name' => $validado['name']]);
 

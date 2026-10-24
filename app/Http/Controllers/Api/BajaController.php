@@ -3,13 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ActualizarBajaRequest;
+use App\Http\Requests\GuardarBajaRequest;
 use App\Models\Activo;
 use App\Models\Asignacion;
 use App\Models\Baja;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 
 class BajaController extends Controller
 {
@@ -21,17 +22,12 @@ class BajaController extends Controller
             $query->withTrashed();
         }
 
-        return response()->json($query->get(), 200);
+        return $this->responderLista($query, $request);
     }
 
-    public function guardar(Request $request)
+    public function guardar(GuardarBajaRequest $request)
     {
-        $validado = $request->validate([
-            'activo_id'   => ['required', Rule::exists('activo', 'id_activo')->whereNull('deleted_at')],
-            'fecha_baja'  => 'required|date|before_or_equal:today',
-            'motivo_baja' => 'required|string|max:255',
-            'observacion' => 'nullable|string',
-        ]);
+        $validado = $request->validated();
 
         // Transacción para garantizar consistencia (el activo queda bloqueado mientras se procesa)
         return DB::transaction(function () use ($validado) {
@@ -87,15 +83,11 @@ class BajaController extends Controller
         return response()->json($baja, 200);
     }
 
-    public function actualizar(Request $request, $id)
+    public function actualizar(ActualizarBajaRequest $request, $id)
     {
         $baja = Baja::withTrashed()->with('activo')->findOrFail($id);
 
-        $validado = $request->validate([
-            'fecha_baja'  => 'sometimes|date|before_or_equal:today',
-            'motivo_baja' => 'sometimes|string|max:255',
-            'observacion' => 'nullable|string',
-        ]);
+        $validado = $request->validated();
 
         if (isset($validado['fecha_baja']) && $baja->activo
             && Carbon::parse($validado['fecha_baja'])->lt($baja->activo->fecha_compra)) {

@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ActualizarPolizaSeguroRequest;
+use App\Http\Requests\GuardarPolizaSeguroRequest;
+use App\Http\Requests\SincronizarActivosPolizaRequest;
 use App\Models\PolizaSeguro;
 use App\Models\Activo;
 use Illuminate\Http\Request;
@@ -22,19 +25,15 @@ class PolizaSeguroController extends Controller
             $query->withTrashed();
         }
 
-        return response()->json($query->get(), 200);
+        return $this->responderLista($query, $request);
     }
 
     /**
      * Registrar una nueva póliza de seguro.
      */
-    public function guardar(Request $request)
+    public function guardar(GuardarPolizaSeguroRequest $request)
     {
-        $validado = $request->validate([
-            'descripcion'  => 'required|string',
-            'fecha_inicio' => 'required|date',
-            'fecha_fin'    => 'required|date|after_or_equal:fecha_inicio',
-        ]);
+        $validado = $request->validated();
 
         $poliza = PolizaSeguro::create($validado);
 
@@ -59,15 +58,11 @@ class PolizaSeguroController extends Controller
     /**
      * Actualizar los datos básicos de una póliza.
      */
-    public function actualizar(Request $request, $id)
+    public function actualizar(ActualizarPolizaSeguroRequest $request, $id)
     {
         $poliza = PolizaSeguro::withTrashed()->findOrFail($id);
 
-        $validado = $request->validate([
-            'descripcion'  => 'sometimes|string',
-            'fecha_inicio' => 'sometimes|date',
-            'fecha_fin'    => 'sometimes|date',
-        ]);
+        $validado = $request->validated();
 
         // Se comparan las fechas finales (las enviadas o las ya guardadas), así funciona aunque llegue solo una
         $fechaInicio = Carbon::parse($validado['fecha_inicio'] ?? $poliza->fecha_inicio);
@@ -108,15 +103,9 @@ class PolizaSeguroController extends Controller
     /**
      * Sincronizar los activos asignados a una póliza (Checkboxes en React).
      */
-    public function sincronizarActivos(Request $request, $id)
+    public function sincronizarActivos(SincronizarActivosPolizaRequest $request, $id)
     {
         $poliza = PolizaSeguro::findOrFail($id);
-
-        $request->validate([
-            'activos'          => 'nullable|array',
-            'activos.*'        => 'integer|distinct|exists:activo,id_activo',
-            'fecha_asignacion' => 'nullable|date',
-        ]);
 
         $idsActivos = array_map('intval', $request->input('activos', []));
         // Si no se envía fecha_asignacion, usa por defecto la fecha_inicio de la póliza o el día actual

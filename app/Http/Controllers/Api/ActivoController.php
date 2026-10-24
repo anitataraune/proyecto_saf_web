@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ActualizarActivoRequest;
+use App\Http\Requests\GuardarActivoRequest;
 use App\Models\Activo;
 use Illuminate\Http\Request;
 
@@ -25,23 +27,15 @@ class ActivoController extends Controller
             $query->onlyTrashed();
         }
 
-        return response()->json($query->get(), 200);
+        return $this->responderLista($query, $request);
     }
 
     /**
      * Registrar un nuevo activo fijo en el sistema.
      */
-    public function guardar(Request $request)
+    public function guardar(GuardarActivoRequest $request)
     {
-        $validado = $request->validate([
-            'descripcion' => 'required|string',
-            'valor_compra' => 'required|numeric',
-            'fecha_compra' => 'required|date',
-            'categoria_id' => 'required|exists:categoria,id_categoria',
-            'ubicacion_id' => 'nullable|exists:ubicacion,id_ubicacion',
-            'proveedor_id' => 'nullable|exists:proveedor,id_proveedor', // Validación añadida
-            'estado_actual' => 'nullable|string',
-        ]);
+        $validado = $request->validated();
 
         $activo = Activo::create($validado);
         return response()->json(['mensaje' => 'Activo registrado', 'activo' => $activo], 201);
@@ -60,26 +54,22 @@ class ActivoController extends Controller
     /**
      * Actualizar los datos de un activo existente.
      */
-    public function actualizar(Request $request, $id)
+    public function actualizar(ActualizarActivoRequest $request, $id)
     {
         $activo = Activo::findOrFail($id);
-
-        $reglas = [
-            'descripcion'   => 'sometimes|required|string|max:255',
-            'valor_compra'  => 'sometimes|required|numeric|min:0',
-            'fecha_compra'  => 'sometimes|required|date',
-            'estado_actual' => 'sometimes|required|string|in:activo,depreciado,dado_de_baja',
-            'categoria_id'  => 'sometimes|required|exists:categoria,id_categoria',
-            'ubicacion_id'  => 'sometimes|nullable|exists:ubicacion,id_ubicacion', // <--- Validación
-            'proveedor_id'  => 'sometimes|nullable|exists:proveedor,id_proveedor',
-        ];
-
-        // Solo se actualizan los campos validados (evita modificar imp_depreciacion, nro_depreciacion, etc.)
-        $validado = $request->validate($reglas);
+        $validado = $request->validated();
 
         // Los datos base del cálculo no pueden cambiar si el activo ya tiene depreciaciones
         $camposBase = ['valor_compra', 'fecha_compra', 'categoria_id'];
         $activo->fill($validado);
+
+        // El estado lo controlan los módulos de Bajas y Depreciación, no la edición manual
+        if ($activo->isDirty('estado_actual')) {
+            return response()->json([
+                'mensaje' => 'El estado del activo no se edita manualmente: use el módulo de Bajas o el proceso de Depreciación.'
+            ], 422);
+        }
+
         if ($activo->isDirty($camposBase) && $activo->depreciaciones()->exists()) {
             return response()->json([
                 'mensaje' => 'No se puede modificar el valor, la fecha de compra ni la categoría de un activo con depreciaciones registradas.'
@@ -100,6 +90,13 @@ class ActivoController extends Controller
     public function eliminar($id)
     {
         $activo = Activo::findOrFail($id);
+
+        if ($activo->asignaciones()->where('estado_asignacion', 'asignado')->exists()) {
+            return response()->json([
+                'mensaje' => 'El activo tiene una asignación vigente; registre primero su devolución.'
+            ], 422);
+        }
+
         $activo->delete();
 
         return response()->json([

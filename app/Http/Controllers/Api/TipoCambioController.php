@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ActualizarTipoCambioRequest;
+use App\Http\Requests\GuardarTipoCambioRequest;
 use App\Models\TipoCambio;
 use Illuminate\Http\Request;
 
@@ -18,17 +20,12 @@ class TipoCambioController extends Controller
         // Opcional: ordenar del más reciente al más antiguo
         $query->orderBy('fecha', 'desc');
 
-        return response()->json($query->get(), 200);
+        return $this->responderLista($query, $request);
     }
 
-    public function guardar(Request $request)
+    public function guardar(GuardarTipoCambioRequest $request)
     {
-        $validado = $request->validate([
-            'fecha' => 'required|date|unique:tipo_cambio,fecha',
-            'ufvs' => 'required|numeric',
-            'valor_tc' => 'required|numeric',
-            'monto' => 'required|numeric',
-        ]);
+        $validado = $request->validated();
 
         $tipoCambio = TipoCambio::create($validado);
 
@@ -42,16 +39,11 @@ class TipoCambioController extends Controller
         return response()->json($tipoCambio, 200);
     }
 
-    public function actualizar(Request $request, $id)
+    public function actualizar(ActualizarTipoCambioRequest $request, $id)
     {
         $tipoCambio = TipoCambio::withTrashed()->findOrFail($id);
 
-        $validado = $request->validate([
-            'fecha' => 'sometimes|date|unique:tipo_cambio,fecha,'.$id.',id_tipo_cambio',
-            'ufvs' => 'sometimes|numeric',
-            'valor_tc' => 'sometimes|numeric',
-            'monto' => 'sometimes|numeric',
-        ]);
+        $validado = $request->validated();
 
         $tipoCambio->update($validado);
 

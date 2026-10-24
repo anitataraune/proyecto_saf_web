@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ActualizarUsuarioRequest;
+use App\Http\Requests\GuardarUsuarioRequest;
 use App\Models\Usuario;
 use Illuminate\Http\Request;
 
@@ -17,16 +19,13 @@ class UsuarioController extends Controller
             $query->withTrashed();
         }
 
-        return response()->json($query->get(), 200);
+        return $this->responderLista($query, $request);
     }
 
     // Crear Usuario
-    public function guardar(Request $request)
+    public function guardar(GuardarUsuarioRequest $request)
     {
-        $validado = $request->validate([
-            'usuario' => 'required|string|unique:usuario,usuario',
-            'clave' => 'required|string|min:6',
-        ]);
+        $validado = $request->validated();
 
         $usuario = Usuario::create($validado);
 
@@ -45,14 +44,11 @@ class UsuarioController extends Controller
     }
 
     // Actualizar usuario
-    public function actualizar(Request $request, $id)
+    public function actualizar(ActualizarUsuarioRequest $request, $id)
     {
         $usuario = Usuario::withTrashed()->findOrFail($id);
 
-        $validado = $request->validate([
-            'usuario' => 'sometimes|string|unique:usuario,usuario,'.$id.',id_usuario',
-            'clave' => 'sometimes|string|min:6',
-        ]);
+        $validado = $request->validated();
 
         $usuario->update($validado);
 

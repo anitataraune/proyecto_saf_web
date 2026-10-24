@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ActualizarProveedorRequest;
+use App\Http\Requests\GuardarProveedorRequest;
 use App\Models\Proveedor;
 use Illuminate\Http\Request;
 
@@ -15,17 +17,12 @@ class ProveedorController extends Controller
             $query->withTrashed();
         }
 
-        return response()->json($query->get(), 200);
+        return $this->responderLista($query, $request);
     }
 
-    public function guardar(Request $request)
+    public function guardar(GuardarProveedorRequest $request)
     {
-        $validado = $request->validate([
-            'nombre' => 'required|string',
-            'apellido' => 'nullable|string',
-            'nit' => 'nullable|string|unique:proveedor,nit',
-            'direccion' => 'nullable|string',
-        ]);
+        $validado = $request->validated();
 
         $proveedor = Proveedor::create($validado);
 
@@ -39,16 +36,11 @@ class ProveedorController extends Controller
         return response()->json($proveedor, 200);
     }
 
-    public function actualizar(Request $request, $id)
+    public function actualizar(ActualizarProveedorRequest $request, $id)
     {
         $proveedor = Proveedor::withTrashed()->findOrFail($id);
 
-        $validado = $request->validate([
-            'nombre' => 'sometimes|string',
-            'apellido' => 'nullable|string',
-            'nit' => 'nullable|string|unique:proveedor,nit,'.$id.',id_proveedor',
-            'direccion' => 'nullable|string',
-        ]);
+        $validado = $request->validated();
 
         $proveedor->update($validado);
 
@@ -58,6 +50,11 @@ class ProveedorController extends Controller
     public function eliminar($id)
     {
         $proveedor = Proveedor::findOrFail($id);
+
+        if ($proveedor->activos()->exists()) {
+            return response()->json(['mensaje' => 'El proveedor tiene activos registrados; no puede eliminarse.'], 422);
+        }
+
         $proveedor->delete();
 
         return response()->json(['mensaje' => 'Proveedor enviado a papelera'], 200);

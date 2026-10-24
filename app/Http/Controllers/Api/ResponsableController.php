@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ActualizarResponsableRequest;
+use App\Http\Requests\GuardarResponsableRequest;
 use App\Models\Responsable;
 use Illuminate\Http\Request;
 
@@ -15,16 +17,12 @@ class ResponsableController extends Controller
             $query->withTrashed();
         }
 
-        return response()->json($query->get(), 200);
+        return $this->responderLista($query, $request);
     }
 
-    public function guardar(Request $request)
+    public function guardar(GuardarResponsableRequest $request)
     {
-        $validado = $request->validate([
-            'nombre_responsable' => 'required|string',
-            'apellido_responsable' => 'required|string',
-            'cargo_responsable' => 'required|string',
-        ]);
+        $validado = $request->validated();
 
         $responsable = Responsable::create($validado);
 
@@ -38,15 +36,11 @@ class ResponsableController extends Controller
         return response()->json($responsable, 200);
     }
 
-    public function actualizar(Request $request, $id)
+    public function actualizar(ActualizarResponsableRequest $request, $id)
     {
         $responsable = Responsable::withTrashed()->findOrFail($id);
 
-        $validado = $request->validate([
-            'nombre_responsable' => 'sometimes|string',
-            'apellido_responsable' => 'sometimes|string',
-            'cargo_responsable' => 'sometimes|string',
-        ]);
+        $validado = $request->validated();
 
         $responsable->update($validado);
 
@@ -56,6 +50,11 @@ class ResponsableController extends Controller
     public function eliminar($id)
     {
         $responsable = Responsable::findOrFail($id);
+
+        if ($responsable->asignaciones()->where('estado_asignacion', 'asignado')->exists()) {
+            return response()->json(['mensaje' => 'El responsable tiene activos asignados; registre primero su devolución.'], 422);
+        }
+
         $responsable->delete();
 
         return response()->json(['mensaje' => 'Responsable enviado a papelera'], 200);

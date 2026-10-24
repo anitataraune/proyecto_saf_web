@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ProcesarDepreciacionRequest;
 use App\Models\Activo;
 use App\Models\Depreciacion;
 use App\Models\TipoCambio;
@@ -29,19 +30,15 @@ class DepreciacionController extends Controller
     }
 
     // Retornar los resultados ordenados
-    return response()->json(
-        $query->orderBy('anio', 'desc')->orderBy('mes', 'desc')->get(),
-        200
-    );
+    $query->orderBy('anio', 'desc')->orderBy('mes', 'desc');
+
+    return $this->responderLista($query, $request);
 }
 
     // Procesa la depreciación masiva (línea recta con actualización por UFV) para un mes/año
-    public function procesarDepreciacion(Request $request)
+    public function procesarDepreciacion(ProcesarDepreciacionRequest $request)
     {
-        $validado = $request->validate([
-            'mes'  => 'required|integer|min:1|max:12',
-            'anio' => 'required|integer|min:2000',
-        ]);
+        $validado = $request->validated();
 
         $mes = (int) $validado['mes'];
         $anio = (int) $validado['anio'];

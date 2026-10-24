@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ActualizarCategoriaRequest;
+use App\Http\Requests\GuardarCategoriaRequest;
 use App\Models\Categoria;
 use Illuminate\Http\Request;
 
@@ -17,16 +19,12 @@ class CategoriaController extends Controller
             $query->withTrashed();
         }
 
-        return response()->json($query->get(), 200);
+        return $this->responderLista($query, $request);
     }
 
-    public function guardar(Request $request)
+    public function guardar(GuardarCategoriaRequest $request)
     {
-        $validado = $request->validate([
-            'nombre' => 'required|string|unique:categoria,nombre',
-            'descripcion' => 'nullable|string',
-            'vida_util' => 'nullable|integer',
-        ]);
+        $validado = $request->validated();
 
         $categoria = Categoria::create($validado);
 
@@ -40,15 +38,11 @@ class CategoriaController extends Controller
         return response()->json($categoria, 200);
     }
 
-    public function actualizar(Request $request, $id)
+    public function actualizar(ActualizarCategoriaRequest $request, $id)
     {
         $categoria = Categoria::withTrashed()->findOrFail($id);
 
-        $validado = $request->validate([
-            'nombre' => 'sometimes|string|unique:categoria,nombre,'.$id.',id_categoria',
-            'descripcion' => 'nullable|string',
-            'vida_util' => 'nullable|integer',
-        ]);
+        $validado = $request->validated();
 
         $categoria->update($validado);
 
@@ -59,6 +53,11 @@ class CategoriaController extends Controller
     public function eliminar($id)
     {
         $categoria = Categoria::findOrFail($id);
+
+        if ($categoria->activos()->exists()) {
+            return response()->json(['mensaje' => 'La categoría tiene activos registrados; reasígnelos antes de eliminarla.'], 422);
+        }
+
         $categoria->delete();
 
         return response()->json(['mensaje' => 'Categoría enviada a papelera'], 200);

@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ActualizarAsignacionRequest;
+use App\Http\Requests\DevolucionAsignacionRequest;
+use App\Http\Requests\GuardarAsignacionRequest;
 use App\Models\Activo;
 use App\Models\Asignacion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 
 class AsignacionController extends Controller
 {
@@ -45,19 +47,14 @@ class AsignacionController extends Controller
             $query->withTrashed();
         }
 
-        return response()->json($query->orderBy('id_asignacion', 'desc')->get(), 200);
+        return $this->responderLista($query->orderBy('id_asignacion', 'desc'), $request);
     }
 
-    public function guardar(Request $request)
+    public function guardar(GuardarAsignacionRequest $request)
     {
         $this->autorizarAccion('asignacion_guardar');
 
-        $validado = $request->validate([
-            'activo_id'        => ['required', 'integer', 'gt:0', Rule::exists('activo', 'id_activo')->whereNull('deleted_at')],
-            'responsable_id'   => ['required', 'integer', 'gt:0', Rule::exists('responsable', 'id_responsable')->whereNull('deleted_at')],
-            'fecha_asignacion' => ['required', 'date', 'before_or_equal:today'],
-            'observacion'      => ['nullable', 'string', 'max:500'],
-        ]);
+        $validado = $request->validated();
 
         $validado['observacion'] = $this->limpiarTexto($request->input('observacion'));
 
@@ -109,13 +106,9 @@ class AsignacionController extends Controller
         return response()->json($asignacion, 200);
     }
 
-    public function registrarDevolucion(Request $request, $id)
+    public function registrarDevolucion(DevolucionAsignacionRequest $request, $id)
     {
         $this->autorizarAccion('asignacion_devolver');
-
-        $request->validate([
-            'fecha_devolucion' => ['required', 'date', 'before_or_equal:today'],
-        ]);
 
         $asignacion = Asignacion::findOrFail($id);
 
@@ -140,17 +133,13 @@ class AsignacionController extends Controller
         ], 200);
     }
 
-    public function actualizar(Request $request, $id)
+    public function actualizar(ActualizarAsignacionRequest $request, $id)
     {
         $this->autorizarAccion('asignacion_editar');
 
         $asignacion = Asignacion::findOrFail($id);
 
-        $validado = $request->validate([
-            'responsable_id'   => ['sometimes', 'integer', 'gt:0', Rule::exists('responsable', 'id_responsable')->whereNull('deleted_at')],
-            'fecha_asignacion' => ['sometimes', 'date', 'before_or_equal:today'],
-            'observacion'      => ['nullable', 'string', 'max:500'],
-        ]);
+        $validado = $request->validated();
 
         if (isset($validado['observacion'])) {
             $validado['observacion'] = $this->limpiarTexto($validado['observacion']);
