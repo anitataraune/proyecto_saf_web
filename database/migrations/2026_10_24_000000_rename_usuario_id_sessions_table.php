@@ -12,25 +12,39 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('sessions', function (Blueprint $table) {
-            $table->dropForeign(['usuario_id']);
-            $table->renameColumn('usuario_id', 'user_id');
-        });
-
-        Schema::table('sessions', function (Blueprint $table) {
-            $table->foreign('user_id')->references('id_usuario')->on('usuario')->onDelete('cascade');
-        });
+        $this->renombrar('usuario_id', 'user_id');
     }
 
     public function down(): void
     {
-        Schema::table('sessions', function (Blueprint $table) {
-            $table->dropForeign(['user_id']);
-            $table->renameColumn('user_id', 'usuario_id');
+        $this->renombrar('user_id', 'usuario_id');
+    }
+
+    private function renombrar(string $desde, string $hacia): void
+    {
+        // El nombre real de la llave e índice puede variar (en MySQL quedaron como "1"), por eso se buscan
+        $llaves = collect(Schema::getForeignKeys('sessions'))
+            ->filter(fn ($fk) => $fk['columns'] === [$desde]);
+        $indices = collect(Schema::getIndexes('sessions'))
+            ->filter(fn ($index) => $index['columns'] === [$desde] && ! $index['primary']);
+
+        Schema::table('sessions', function (Blueprint $table) use ($llaves, $desde) {
+            foreach ($llaves as $fk) {
+                $table->dropForeign($fk['name'] ?: [$desde]);
+            }
         });
 
-        Schema::table('sessions', function (Blueprint $table) {
-            $table->foreign('usuario_id')->references('id_usuario')->on('usuario')->onDelete('cascade');
+        Schema::table('sessions', function (Blueprint $table) use ($indices, $desde, $hacia) {
+            foreach ($indices as $index) {
+                $table->dropIndex($index['name']);
+            }
+
+            $table->renameColumn($desde, $hacia);
+        });
+
+        Schema::table('sessions', function (Blueprint $table) use ($hacia) {
+            $table->index($hacia);
+            $table->foreign($hacia)->references('id_usuario')->on('usuario')->onDelete('cascade');
         });
     }
 };
