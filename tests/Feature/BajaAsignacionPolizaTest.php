@@ -88,6 +88,22 @@ class BajaAsignacionPolizaTest extends TestCase
         $this->asignar()->assertStatus(422)->assertJsonValidationErrors('responsable_id');
     }
 
+    public function test_activos_disponibles_y_asignacion_actual_en_la_lista(): void
+    {
+        $libre = $this->crearActivo('Impresora');
+        $deBaja = $this->crearActivo('Monitor');
+        $deBaja->update(['estado_actual' => 'dado_de_baja']);
+        $this->asignar()->assertCreated();
+
+        $ids = collect($this->getJson('/api/activo/disponibles')->assertOk()->json())->pluck('id_activo')->all();
+        $this->assertSame([$libre->id_activo], $ids);
+
+        // La lista general incluye asignacion_actual (lo usa el filtro del frontend)
+        $lista = collect($this->getJson('/api/activo')->json())->keyBy('id_activo');
+        $this->assertSame('asignado', $lista[$this->activo->id_activo]['asignacion_actual']['estado_asignacion']);
+        $this->assertNull($lista[$libre->id_activo]['asignacion_actual']);
+    }
+
     public function test_restaurar_asignacion_no_duplica_asignaciones_vigentes(): void
     {
         $this->asignar()->assertCreated();

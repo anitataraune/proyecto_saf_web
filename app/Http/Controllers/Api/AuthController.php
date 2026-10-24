@@ -7,27 +7,9 @@ use App\Models\Usuario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
-use OpenApi\Attributes as OA;
-
+// La documentación OpenAPI de estas rutas está en app/Swagger/Rutas
 class AuthController extends Controller
 {
-    #[OA\Post(
-    path: '/api/autenticacion/iniciar-sesion',
-    summary: 'Iniciar sesión',
-    description: 'Autentica un usuario y devuelve el token de acceso.',
-    tags: ['Autenticación'],
-    responses: [
-        new OA\Response(
-            response: 200,
-            description: 'Inicio de sesión exitoso'
-        ),
-        new OA\Response(
-            response: 401,
-            description: 'Credenciales incorrectas'
-        )
-    ]
-    )]
-
     /**
      * Manejar el inicio de sesión de la API.
      */

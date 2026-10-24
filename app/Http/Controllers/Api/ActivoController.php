@@ -20,12 +20,29 @@ class ActivoController extends Controller
         $query = Activo::with([
             'categoria:id_categoria,nombre', 
             'ubicacion:id_ubicacion,nombre_ubicacion',
-            'proveedor:id_proveedor,nombre,apellido'
+            'proveedor:id_proveedor,nombre,apellido',
+            // El frontend usa asignacion_actual para saber si el activo está libre
+            'asignacionActual',
         ]);
 
         if ($request->has('eliminados') && $request->boolean('eliminados')) {
             $query->onlyTrashed();
         }
+
+        return $this->responderLista($query, $request);
+    }
+
+    /**
+     * Listar los activos que se pueden asignar: vigentes y sin asignación activa.
+     */
+    public function listarDisponibles(Request $request)
+    {
+        $query = Activo::with([
+            'categoria:id_categoria,nombre',
+            'ubicacion:id_ubicacion,nombre_ubicacion',
+        ])
+            ->where('estado_actual', '!=', 'dado_de_baja')
+            ->whereDoesntHave('asignaciones', fn ($q) => $q->where('estado_asignacion', 'asignado'));
 
         return $this->responderLista($query, $request);
     }
