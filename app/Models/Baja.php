@@ -19,6 +19,7 @@ class Baja extends Model
         'activo_id',
         'fecha_baja',
         'motivo_baja',
+        'observacion',
     ];
 
     protected function casts(): array

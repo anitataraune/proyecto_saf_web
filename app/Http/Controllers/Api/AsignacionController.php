@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Activo;
 use App\Models\Asignacion;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class AsignacionController extends Controller
 {
@@ -50,38 +53,48 @@ class AsignacionController extends Controller
         $this->autorizarAccion('asignacion_guardar');
 
         $validado = $request->validate([
-            'activo_id'        => ['required', 'integer', 'gt:0', 'exists:activo,id_activo'],
-            'responsable_id'   => ['required', 'integer', 'gt:0', 'exists:responsable,id_responsable'],
+            'activo_id'        => ['required', 'integer', 'gt:0', Rule::exists('activo', 'id_activo')->whereNull('deleted_at')],
+            'responsable_id'   => ['required', 'integer', 'gt:0', Rule::exists('responsable', 'id_responsable')->whereNull('deleted_at')],
             'fecha_asignacion' => ['required', 'date', 'before_or_equal:today'],
             'observacion'      => ['nullable', 'string', 'max:500'],
         ]);
 
         $validado['observacion'] = $this->limpiarTexto($request->input('observacion'));
 
-        $asignadoActivo = Asignacion::where('activo_id', $validado['activo_id'])
-            ->where('estado_asignacion', 'asignado')
-            ->exists();
+        // El bloqueo del activo evita que dos peticiones simultáneas lo asignen dos veces
+        return DB::transaction(function () use ($validado) {
+            $activo = Activo::lockForUpdate()->findOrFail($validado['activo_id']);
 
-        if ($asignadoActivo) {
+            $asignadoActivo = Asignacion::where('activo_id', $validado['activo_id'])
+                ->where('estado_asignacion', 'asignado')
+                ->exists();
+
+            if ($asignadoActivo) {
+                return response()->json([
+                    'mensaje' => 'Este activo ya está asignado actualmente a otra persona.'
+                ], 422);
+            }
+
+            if ($activo->estado_actual === 'dado_de_baja') {
+                return response()->json([
+                    'mensaje' => 'No se puede asignar un activo que ha sido dado de baja.'
+                ], 422);
+            }
+
+            if (Carbon::parse($validado['fecha_asignacion'])->lt($activo->fecha_compra)) {
+                return response()->json([
+                    'mensaje' => 'La fecha de asignación no puede ser anterior a la fecha de compra del activo.'
+                ], 422);
+            }
+
+            $validado['estado_asignacion'] = 'asignado';
+            $asignacion = Asignacion::create($validado);
+
             return response()->json([
-                'mensaje' => 'Este activo ya está asignado actualmente a otra persona.'
-            ], 422);
-        }
-
-        $activo = Activo::findOrFail($validado['activo_id']);
-        if ($activo->estado_actual === 'dado_de_baja') {
-            return response()->json([
-                'mensaje' => 'No se puede asignar un activo que ha sido dado de baja.'
-            ], 422);
-        }
-
-        $validado['estado_asignacion'] = 'asignado';
-        $asignacion = Asignacion::create($validado);
-
-        return response()->json([
-            'mensaje' => 'Asignación registrada con éxito.',
-            'data'    => $asignacion->load(['activo', 'responsable'])
-        ], 201);
+                'mensaje' => 'Asignación registrada con éxito.',
+                'data'    => $asignacion->load(['activo', 'responsable'])
+            ], 201);
+        });
     }
 
     public function mostrar($id)
@@ -110,7 +123,7 @@ class AsignacionController extends Controller
             return response()->json(['mensaje' => 'Esta asignación ya fue devuelta previamente.'], 422);
         }
 
-        if ($request->fecha_devolucion < $asignacion->fecha_asignacion) {
+        if (Carbon::parse($request->fecha_devolucion)->lt($asignacion->fecha_asignacion)) {
             return response()->json([
                 'mensaje' => 'La fecha de devolución no puede ser anterior a la fecha de asignación.'
             ], 422);
@@ -131,10 +144,10 @@ class AsignacionController extends Controller
     {
         $this->autorizarAccion('asignacion_editar');
 
-        $asignacion = Asignacion::withTrashed()->findOrFail($id);
+        $asignacion = Asignacion::findOrFail($id);
 
         $validado = $request->validate([
-            'responsable_id'   => ['sometimes', 'integer', 'gt:0', 'exists:responsable,id_responsable'],
+            'responsable_id'   => ['sometimes', 'integer', 'gt:0', Rule::exists('responsable', 'id_responsable')->whereNull('deleted_at')],
             'fecha_asignacion' => ['sometimes', 'date', 'before_or_equal:today'],
             'observacion'      => ['nullable', 'string', 'max:500'],
         ]);
@@ -144,7 +157,7 @@ class AsignacionController extends Controller
         }
 
         if (isset($validado['fecha_asignacion']) && isset($asignacion->fecha_devolucion)
-            && $validado['fecha_asignacion'] > $asignacion->fecha_devolucion) {
+            && Carbon::parse($validado['fecha_asignacion'])->gt($asignacion->fecha_devolucion)) {
             return response()->json([
                 'mensaje' => 'La fecha de asignación no puede ser posterior a la fecha de devolución.'
             ], 422);
@@ -172,7 +185,23 @@ class AsignacionController extends Controller
     {
         $this->autorizarAccion('asignacion_restaurar');
 
-        $asignacion = Asignacion::onlyTrashed()->findOrFail($id);
+        $asignacion = Asignacion::onlyTrashed()->with('activo')->findOrFail($id);
+
+        // Una asignación vigente solo se restaura si el activo sigue disponible
+        if ($asignacion->estado_asignacion === 'asignado') {
+            $otraVigente = Asignacion::where('activo_id', $asignacion->activo_id)
+                ->where('estado_asignacion', 'asignado')
+                ->exists();
+
+            if ($otraVigente) {
+                return response()->json(['mensaje' => 'El activo ya tiene otra asignación vigente.'], 422);
+            }
+
+            if (! $asignacion->activo || $asignacion->activo->estado_actual === 'dado_de_baja') {
+                return response()->json(['mensaje' => 'El activo fue eliminado o dado de baja; no se puede restaurar la asignación.'], 422);
+            }
+        }
+
         $asignacion->restore();
 
         return response()->json(['mensaje' => 'Asignación restaurada'], 200);

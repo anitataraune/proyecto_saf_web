@@ -66,6 +66,14 @@ class Activo extends Model
         return $this->hasMany(Depreciacion::class, 'activo_id', 'id_activo');
     }
 
+    // Estado que le corresponde según su última depreciación (sin considerar bajas)
+    public function estadoSegunDepreciacion(): string
+    {
+        $ultima = $this->depreciaciones()->orderByDesc('anio')->orderByDesc('mes')->first();
+
+        return ($ultima && $ultima->valor_neto <= 0) ? 'depreciado' : 'activo';
+    }
+
     public function asignaciones(): HasMany
     {
         return $this->hasMany(Asignacion::class, 'activo_id', 'id_activo');

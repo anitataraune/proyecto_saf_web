@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\PolizaSeguro;
 use App\Models\Activo;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class PolizaSeguroController extends Controller
 {
@@ -64,8 +66,18 @@ class PolizaSeguroController extends Controller
         $validado = $request->validate([
             'descripcion'  => 'sometimes|string',
             'fecha_inicio' => 'sometimes|date',
-            'fecha_fin'    => 'sometimes|date|after_or_equal:fecha_inicio',
+            'fecha_fin'    => 'sometimes|date',
         ]);
+
+        // Se comparan las fechas finales (las enviadas o las ya guardadas), así funciona aunque llegue solo una
+        $fechaInicio = Carbon::parse($validado['fecha_inicio'] ?? $poliza->fecha_inicio);
+        $fechaFin = Carbon::parse($validado['fecha_fin'] ?? $poliza->fecha_fin);
+
+        if ($fechaFin->lt($fechaInicio)) {
+            return response()->json([
+                'mensaje' => 'La fecha de fin no puede ser anterior a la fecha de inicio.'
+            ], 422);
+        }
 
         $poliza->update($validado);
 
@@ -102,24 +114,46 @@ class PolizaSeguroController extends Controller
 
         $request->validate([
             'activos'          => 'nullable|array',
-            'activos.*'        => 'exists:activo,id_activo',
+            'activos.*'        => 'integer|distinct|exists:activo,id_activo',
             'fecha_asignacion' => 'nullable|date',
         ]);
 
-        $idsActivos = $request->input('activos', []);
+        $idsActivos = array_map('intval', $request->input('activos', []));
         // Si no se envía fecha_asignacion, usa por defecto la fecha_inicio de la póliza o el día actual
         $fechaAsignacion = $request->input('fecha_asignacion', $poliza->fecha_inicio?->format('Y-m-d') ?? now()->toDateString());
 
-        // Preparamos la estructura [id_activo => ['fecha_asignacion' => 'YYYY-MM-DD']]
-        $datosSincronizar = [];
-        foreach ($idsActivos as $activoId) {
-            $datosSincronizar[$activoId] = [
-                'fecha_asignacion' => $fechaAsignacion,
-            ];
+        if (Carbon::parse($fechaAsignacion)->lt($poliza->fecha_inicio) || Carbon::parse($fechaAsignacion)->gt($poliza->fecha_fin)) {
+            return response()->json([
+                'mensaje' => 'La fecha de asignación debe estar dentro de la vigencia de la póliza.'
+            ], 422);
         }
 
-        // sync() agrega los nuevos, mantiene los existentes y elimina los que se desmarcaron
-        $poliza->activos()->sync($datosSincronizar);
+        $actuales = $poliza->activos()->withTrashed()->pluck('activo.id_activo')->map('intval')->all();
+        $nuevos = array_values(array_diff($idsActivos, $actuales));
+        $quitados = array_values(array_diff($actuales, $idsActivos));
+
+        // Solo los activos que se agregan deben estar vigentes (los ya asegurados se conservan)
+        $noValidos = Activo::withTrashed()
+            ->whereIn('id_activo', $nuevos)
+            ->where(fn ($q) => $q->whereNotNull('deleted_at')->orWhere('estado_actual', 'dado_de_baja'))
+            ->pluck('descripcion');
+
+        if ($noValidos->isNotEmpty()) {
+            return response()->json([
+                'mensaje' => 'No se pueden asegurar activos eliminados o dados de baja: '.$noValidos->implode(', ').'.'
+            ], 422);
+        }
+
+        // Se agregan los nuevos y se quitan los desmarcados, sin tocar la fecha de los que ya estaban
+        DB::transaction(function () use ($poliza, $nuevos, $quitados, $fechaAsignacion) {
+            if ($quitados) {
+                $poliza->activos()->detach($quitados);
+            }
+
+            if ($nuevos) {
+                $poliza->activos()->attach(array_fill_keys($nuevos, ['fecha_asignacion' => $fechaAsignacion]));
+            }
+        });
 
         return response()->json([
             'mensaje' => 'Activos asignados a la póliza correctamente.',
