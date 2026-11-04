@@ -1,0 +1,159 @@
+@import "tailwindcss";
+
+/* Variables base. ProveedorConfiguracion sobrescribe las de marca con los valores de la BD. */
+:root {
+    --color-primario: #2563eb;
+    --color-secundario: #1e293b;
+    --color-fondo: #f8fafc;
+    --color-superficie: #ffffff;
+    --color-texto: #0f172a;
+    --fuente-sistema: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+    --color-borde: #e2e8f0;
+    --color-texto-secundario: #64748b;
+    --color-exito: #16a34a;
+    --color-advertencia: #ca8a04;
+    --color-peligro: #dc2626;
+
+    --sombra-suave: 0 1px 2px rgb(15 23 42 / 0.04), 0 1px 3px rgb(15 23 42 / 0.06);
+    --sombra-media: 0 4px 12px -2px rgb(15 23 42 / 0.08), 0 2px 4px -2px rgb(15 23 42 / 0.05);
+}
+
+/*
+ * Las páginas usan clases "blue-*" de Tailwind. Se redirigen al color primario configurable
+ * para que el cambio de paleta en Configuración se refleje en todo el sistema.
+ */
+@theme inline {
+    --font-sans: var(--fuente-sistema);
+
+    --color-blue-50: color-mix(in oklab, var(--color-primario) 7%, white);
+    --color-blue-100: color-mix(in oklab, var(--color-primario) 14%, white);
+    --color-blue-200: color-mix(in oklab, var(--color-primario) 28%, white);
+    --color-blue-300: color-mix(in oklab, var(--color-primario) 45%, white);
+    --color-blue-400: color-mix(in oklab, var(--color-primario) 65%, white);
+    --color-blue-500: color-mix(in oklab, var(--color-primario) 85%, white);
+    --color-blue-600: var(--color-primario);
+    --color-blue-700: color-mix(in oklab, var(--color-primario) 85%, black);
+    --color-blue-800: color-mix(in oklab, var(--color-primario) 70%, black);
+    --color-blue-900: color-mix(in oklab, var(--color-primario) 55%, black);
+}
+
+@layer base {
+    html {
+        font-family: var(--fuente-sistema);
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+    }
+
+    body {
+        background-color: var(--color-fondo);
+        color: var(--color-texto);
+        min-height: 100vh;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        color: var(--color-texto);
+        letter-spacing: -0.01em;
+    }
+
+    button:not(:disabled),
+    [role='button']:not(:disabled) {
+        cursor: pointer;
+    }
+
+    :focus-visible {
+        outline: 2px solid var(--color-primario);
+        outline-offset: 2px;
+    }
+
+    input:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible {
+        outline: none;
+    }
+
+    input:not([type='checkbox']):not([type='radio']):not([type='color']):not([type='file']),
+    select,
+    textarea {
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    input[type='checkbox'],
+    input[type='radio'] {
+        accent-color: var(--color-primario);
+    }
+
+    table {
+        font-variant-numeric: tabular-nums;
+    }
+}
+
+@layer components {
+    .tarjeta,
+    .card {
+        background-color: var(--color-superficie);
+        border: 1px solid var(--color-borde);
+        border-radius: 0.75rem;
+        box-shadow: var(--sombra-suave);
+        padding: 1.25rem;
+    }
+
+    .btn-primary {
+        background-color: var(--color-primario);
+        color: #fff;
+        padding: 0.625rem 1.125rem;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        transition: background-color 0.15s ease;
+    }
+
+    .btn-primary:hover {
+        background-color: color-mix(in oklab, var(--color-primario) 85%, black);
+    }
+
+    /* Scroll discreto para la barra lateral y listas largas */
+    .scroll-fino {
+        scrollbar-width: thin;
+        scrollbar-color: rgb(255 255 255 / 0.2) transparent;
+    }
+}
+
+/* Animación de entrada del modal */
+@keyframes modal-entrada {
+    from { opacity: 0; transform: translateY(8px) scale(0.98); }
+    to { opacity: 1; transform: none; }
+}
+
+@keyframes fondo-entrada {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.animar-modal { animation: modal-entrada 0.18s ease-out; }
+.animar-fondo { animation: fondo-entrada 0.15s ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+    .animar-modal,
+    .animar-fondo { animation: none; }
+}
+
+/* SweetAlert2 alineado con la paleta del sistema */
+.swal2-popup {
+    font-family: var(--fuente-sistema) !important;
+    border-radius: 0.875rem !important;
+}
+
+.swal2-title {
+    font-size: 1.25rem !important;
+    color: var(--color-texto) !important;
+}
+
+.swal2-styled.swal2-confirm:not([style*='background']) {
+    background-color: var(--color-primario) !important;
+}
+
+.swal2-styled {
+    border-radius: 0.5rem !important;
+    font-weight: 600 !important;
+    box-shadow: none !important;
+}

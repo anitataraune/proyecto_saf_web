@@ -1,4 +1,13 @@
-# Backend Laravel (API) - PHP 8.4
+# Etapa 1: compilar el frontend React
+FROM node:22-alpine AS frontend
+
+WORKDIR /app
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
+# Etapa 2: backend Laravel (API) - PHP 8.4
 FROM php:8.4-cli
 
 # Dependencias del sistema y extensiones de PHP
@@ -20,6 +29,9 @@ RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --no-in
 
 # Copiar el resto del proyecto
 COPY . .
+
+# Frontend compilado: index.html y assets quedan en public/ y los sirve Laravel
+COPY --from=frontend /app/dist/ ./public/
 
 # Carpetas que Laravel necesita escribir (se excluyen en .dockerignore)
 RUN mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views \
