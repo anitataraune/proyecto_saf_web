@@ -20,6 +20,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Render (y otros hosting) están detrás de un proxy: confiar en él para generar URLs https
+        $middleware->trustProxies(at: '*');
+
         $middleware->alias([
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'role'       => \Spatie\Permission\Middleware\RoleMiddleware::class,
