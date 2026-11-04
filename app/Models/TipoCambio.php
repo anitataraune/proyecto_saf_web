@@ -18,7 +18,6 @@ class TipoCambio extends Model
         'fecha', // Campo nuevo
         'ufvs',
         'valor_tc',
-        'monto',
     ];
 
     protected function casts(): array
@@ -27,7 +26,6 @@ class TipoCambio extends Model
             'fecha'    => 'date:Y-m-d',
             'ufvs'     => 'double',
             'valor_tc' => 'double',
-            'monto'    => 'double',
         ];
     }
 

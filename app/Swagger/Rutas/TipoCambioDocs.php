@@ -39,7 +39,7 @@ class TipoCambioDocs
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
-                required: ['fecha', 'ufvs', 'valor_tc', 'monto'],
+                required: ['fecha', 'ufvs', 'valor_tc'],
                 properties: [
                     new OA\Property(
                         property: 'fecha',
@@ -56,12 +56,6 @@ class TipoCambioDocs
                         property: 'valor_tc',
                         type: 'number',
                         example: 6.96
-                    ),
-                    new OA\Property(
-                        property: 'monto',
-                        type: 'number',
-                        minimum: 0,
-                        example: 0
                     ),
                 ]
             )
@@ -123,12 +117,6 @@ class TipoCambioDocs
                         property: 'valor_tc',
                         type: 'number',
                         example: 6.96
-                    ),
-                    new OA\Property(
-                        property: 'monto',
-                        type: 'number',
-                        minimum: 0,
-                        example: 0
                     ),
                 ]
             )

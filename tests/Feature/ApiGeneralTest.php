@@ -167,7 +167,7 @@ class ApiGeneralTest extends TestCase
         Sanctum::actingAs($this->admin);
 
         $this->postJson('/api/categoria', ['nombre' => 'X', 'vida_util' => 0])->assertJsonValidationErrors('vida_util');
-        $this->postJson('/api/tipo-cambio', ['fecha' => '2026-01-31', 'ufvs' => 0, 'valor_tc' => 6.96, 'monto' => 0])
+        $this->postJson('/api/tipo-cambio', ['fecha' => '2026-01-31', 'ufvs' => 0, 'valor_tc' => 6.96])
             ->assertJsonValidationErrors('ufvs');
         $this->postJson('/api/configuracion', ['color_primario' => 'azul123'])->assertJsonValidationErrors('color_primario');
         $this->postJson('/api/configuracion', ['color_primario' => '#1A2B3C'])->assertOk();

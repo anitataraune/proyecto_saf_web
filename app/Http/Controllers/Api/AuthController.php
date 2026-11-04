@@ -45,7 +45,8 @@ class AuthController extends Controller
         $permisos = $usuario->getAllPermissions()->pluck('name');
 
         // Evaluamos si cuenta con el permiso commodore global para facilitarle la lógica a React
-        $esSuperAdmin = $usuario->hasPermissionTo('acceso_total', 'api');
+        // checkPermissionTo devuelve false (en vez de lanzar excepción) si el permiso aún no existe en la BD
+        $esSuperAdmin = $usuario->checkPermissionTo('acceso_total', 'api');
 
         return response()->json([
             'mensaje' => 'Inicio de sesión exitoso',

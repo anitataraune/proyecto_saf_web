@@ -36,9 +36,9 @@ class DepreciacionTest extends TestCase
             'categoria_id' => $categoria->id_categoria,
         ]);
 
-        TipoCambio::create(['fecha' => '2026-01-10', 'ufvs' => 2.00, 'valor_tc' => 6.96, 'monto' => 0]);
-        TipoCambio::create(['fecha' => '2026-01-31', 'ufvs' => 2.02, 'valor_tc' => 6.96, 'monto' => 0]);
-        TipoCambio::create(['fecha' => '2026-02-28', 'ufvs' => 2.04, 'valor_tc' => 6.96, 'monto' => 0]);
+        TipoCambio::create(['fecha' => '2026-01-10', 'ufvs' => 2.00, 'valor_tc' => 6.96]);
+        TipoCambio::create(['fecha' => '2026-01-31', 'ufvs' => 2.02, 'valor_tc' => 6.96]);
+        TipoCambio::create(['fecha' => '2026-02-28', 'ufvs' => 2.04, 'valor_tc' => 6.96]);
     }
 
     private function procesar(int $mes, int $anio = 2026)
@@ -80,8 +80,8 @@ class DepreciacionTest extends TestCase
 
     public function test_no_duplica_ni_salta_periodos(): void
     {
-        TipoCambio::create(['fecha' => '2026-03-31', 'ufvs' => 2.05, 'valor_tc' => 6.96, 'monto' => 0]);
-        TipoCambio::create(['fecha' => '2025-12-31', 'ufvs' => 1.99, 'valor_tc' => 6.96, 'monto' => 0]);
+        TipoCambio::create(['fecha' => '2026-03-31', 'ufvs' => 2.05, 'valor_tc' => 6.96]);
+        TipoCambio::create(['fecha' => '2025-12-31', 'ufvs' => 1.99, 'valor_tc' => 6.96]);
 
         // Antes de la fecha de compra
         $this->procesar(12, 2025)->assertJsonPath('total_omitidos', 1);
@@ -150,7 +150,7 @@ class DepreciacionTest extends TestCase
         foreach (range(1, 12) as $mes) {
             TipoCambio::create([
                 'fecha' => Carbon::create(2025, $mes, 1)->endOfMonth()->toDateString(),
-                'ufvs' => 2.0, 'valor_tc' => 6.96, 'monto' => 0,
+                'ufvs' => 2.0, 'valor_tc' => 6.96,
             ]);
         }
 
@@ -165,7 +165,7 @@ class DepreciacionTest extends TestCase
         $this->assertEquals(83.37, Depreciacion::where('activo_id', $activo->id_activo)->where('mes', 12)->value('depreciacion_periodo'));
 
         // Ya depreciado: no entra en el siguiente proceso
-        TipoCambio::create(['fecha' => '2026-01-01', 'ufvs' => 2.0, 'valor_tc' => 6.96, 'monto' => 0]);
+        TipoCambio::create(['fecha' => '2026-01-01', 'ufvs' => 2.0, 'valor_tc' => 6.96]);
         $this->procesar(1, 2026);
         $this->assertSame(12, Depreciacion::where('activo_id', $activo->id_activo)->count());
     }

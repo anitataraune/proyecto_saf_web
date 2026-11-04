@@ -18,7 +18,6 @@ class GuardarTipoCambioRequest extends FormRequest
             'fecha'    => 'required|date|unique:tipo_cambio,fecha',
             'ufvs'     => 'required|numeric|gt:0',
             'valor_tc' => 'required|numeric|gt:0',
-            'monto'    => 'required|numeric|min:0',
         ];
     }
 }
